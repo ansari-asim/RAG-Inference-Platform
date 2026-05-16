@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rag-config
+data:
+  APP_NAME: "RAG-Inference-Platform"
+  API_PORT: "8000"
+  LOG_LEVEL: "INFO"
+  RATE_LIMIT_ENABLED: "true"
+  RATE_LIMIT_REQUESTS: "100"
+  RATE_LIMIT_WINDOW: "60"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: rag-secrets
+type: Opaque
+stringData:
+  database-url: "postgresql+asyncpg://postgres:password@postgres:5432/rag_platform"
+  secret-key: "your-secret-key-change-in-production"

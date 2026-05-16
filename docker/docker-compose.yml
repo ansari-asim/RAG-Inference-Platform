@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  # RAG Middleware API
+  rag-api:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: rag-middleware
+    ports:
+      - "8000:8000"
+    environment:
+      - OLLAMA_BASE_URL=http://host.docker.internal:11434
+      - OLLAMA_MODEL=llama3.2:latest
+      - OLLAMA_EMBEDDING_MODEL=nomic-embed-text
+      - API_HOST=0.0.0.0
+      - API_PORT=8000
+      - CHROMA_PERSISTENCE_PATH=/app/data/chroma_data
+      - DATABASE_URL=sqlite+aiosqlite:///app/data/sqlite.db
+      - LOG_LEVEL=INFO
+    volumes:
+      - ../data:/app/data
+      - ../logs:/app/logs
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  # Optional: Ollama service (uncomment if you want Ollama in Docker)
+  # ollama:
+  #   image: ollama/ollama:latest
+  #   container_name: ollama
+  #   ports:
+  #     - "11434:11434"
+  #   volumes:
+  #     - ollama_data:/root/.ollama
+  #   restart: unless-stopped
+
+volumes:
+  # ollama_data:
+  #   name: ollama_data
+  data:
+    name: rag_data

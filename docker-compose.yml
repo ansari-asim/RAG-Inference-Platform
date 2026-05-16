@@ -1,0 +1,100 @@
+version: '3.8'
+
+services:
+  # Main RAG API
+  rag-api:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    container_name: rag-inference-platform
+    ports:
+      - "8000:8000"
+      - "9090:9090"
+    environment:
+      - APP_NAME=RAG-Inference-Platform
+      - API_HOST=0.0.0.0
+      - API_PORT=8000
+      - OLLAMA_SERVERS=http://host.docker.internal:11434,http://host.docker.internal:11435,http://host.docker.internal:11436
+      - QDRANT_HOST=qdrant
+      - QDRANT_PORT=6333
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@postgres:5432/rag_platform
+      - LOG_LEVEL=INFO
+      - RATE_LIMIT_ENABLED=true
+      - RATE_LIMIT_REQUESTS=100
+      - RATE_LIMIT_WINDOW=60
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    depends_on:
+      - qdrant
+      - redis
+      - postgres
+    restart: unless-stopped
+    networks:
+      - rag-network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  # Qdrant Vector Database
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: qdrant
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    restart: unless-stopped
+    networks:
+      - rag-network
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    networks:
+      - rag-network
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: postgres
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=rag_user
+      - POSTGRES_PASSWORD=dev_password
+      - POSTGRES_DB=rag_platform
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      - rag-network
+
+  # Optional: Prometheus for metrics
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    ports:
+      - "9091:9090"
+    volumes:
+      - ./docker/prometheus.yml:/etc/prometheus/prometheus.yml
+    restart: unless-stopped
+    networks:
+      - rag-network
+
+volumes:
+  qdrant_data:
+  redis_data:
+  postgres_data:
+
+networks:
+  rag-network:
+    driver: bridge
